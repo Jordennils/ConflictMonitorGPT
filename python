@@ -1,0 +1,13 @@
+import os
+from telegram import Bot
+import time
+
+bot = Bot(token=os.getenv("TELEGRAM_BOT_TOKEN"))
+chat_id = os.getenv("TELEGRAM_CHAT_ID")
+
+def send_test():
+    bot.send_message(chat_id=chat_id, text="⚠️ TEST melding: systeem is live!")
+
+if __name__ == "__main__":
+    send_test()
+    time.sleep(2)
