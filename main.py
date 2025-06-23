@@ -100,6 +100,7 @@ def start_monitoring():
                 analysis = analyze_article(title, description)
                 if analysis:
                     send_investment_alert(article, analysis)
+                # Geen else: er wordt niks gestuurd als geen investering wordt gevonden
         except Exception as e:
             print(f"Fout tijdens controleren of verzenden: {e}")
 
@@ -108,11 +109,4 @@ def start_monitoring():
 if __name__ == "__main__":
     start_monitoring()
 
-
-
-
-
-
-    
-    
 
