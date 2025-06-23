@@ -61,11 +61,20 @@ def check_newsapi():
 
     for article in articles:
         title = article.get("title", "")
+        published_at = article.get("publishedAt", "")
         if title and title not in last_sent_titles:
-            last_sent_titles.append(title)
-            if len(last_sent_titles) > 100:
-                last_sent_titles.pop(0)
-            relevant.append(article)
+            # Check of artikel niet ouder is dan 10 minuten
+            if published_at:
+                published_time = datetime.fromisoformat(published_at.replace("Z", "+00:00"))
+                now = datetime.utcnow()
+                if now - published_time <= timedelta(minutes=10):
+                    last_sent_titles.append(title)
+                    if len(last_sent_titles) > 100:
+                        last_sent_titles.pop(0)
+                    relevant.append(article)
+            else:
+                # Als er geen publicatietijd is, negeren we het artikel
+                continue
 
     return relevant
 
@@ -100,7 +109,6 @@ def start_monitoring():
                 analysis = analyze_article(title, description)
                 if analysis:
                     send_investment_alert(article, analysis)
-                # Geen else: er wordt niks gestuurd als geen investering wordt gevonden
         except Exception as e:
             print(f"Fout tijdens controleren of verzenden: {e}")
 
