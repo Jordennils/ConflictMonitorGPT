@@ -4,20 +4,15 @@ import requests
 from telegram import Bot
 from datetime import datetime, timedelta
 
-# Telegram instellingen
 bot = Bot(token=os.getenv("TELEGRAM_BOT_TOKEN"))
 chat_id = os.getenv("TELEGRAM_CHAT_ID")
-
-# NewsAPI sleutel
 NEWSAPI_KEY = "c3ceb5693e814fb393711c27c90abc4f"
 
-# Wat we zoeken (conflict triggers)
 KEYWORDS = [
     "drone attack oil", "missile strike", "port blockade", "cyberattack bank",
     "NATO weapons delivery", "unannounced sanctions", "chip embargo", "military escalation"
 ]
 
-# Om dubbele meldingen te voorkomen
 last_sent_titles = []
 
 INVESTMENT_MAP = [
@@ -57,24 +52,24 @@ def check_newsapi():
     url = f"https://newsapi.org/v2/everything?q={' OR '.join(KEYWORDS)}&language=en&sortBy=publishedAt&pageSize=10&apiKey={NEWSAPI_KEY}"
     response = requests.get(url)
     articles = response.json().get("articles", [])
+    print(f"[DEBUG] 🔍 Aantal artikelen opgehaald: {len(articles)}")
     relevant = []
 
     for article in articles:
         title = article.get("title", "")
         published_at = article.get("publishedAt", "")
         if title and title not in last_sent_titles:
-            # Check of artikel niet ouder is dan 10 minuten
-            if published_at:
-                published_time = datetime.fromisoformat(published_at.replace("Z", "+00:00"))
-                now = datetime.utcnow()
-                if now - published_time <= timedelta(minutes=10):
-                    last_sent_titles.append(title)
-                    if len(last_sent_titles) > 100:
-                        last_sent_titles.pop(0)
-                    relevant.append(article)
+            published_time = datetime.strptime(published_at, "%Y-%m-%dT%H:%M:%SZ")
+            if datetime.utcnow() - published_time < timedelta(minutes=10):
+                print(f"[DEBUG] ✅ Relevante titel gevonden (binnen 10 minuten): {title}")
+                last_sent_titles.append(title)
+                if len(last_sent_titles) > 100:
+                    last_sent_titles.pop(0)
+                relevant.append(article)
             else:
-                # Als er geen publicatietijd is, negeren we het artikel
-                continue
+                print(f"[DEBUG] ⏰ Ouder dan 10 minuten: {title}")
+        else:
+            print(f"[DEBUG] ❌ Dubbele of lege titel: {title}")
 
     return relevant
 
@@ -83,7 +78,9 @@ def analyze_article(title, description):
     for entry in INVESTMENT_MAP:
         if any(keyword.lower() in content for keyword in entry["keywords"]):
             if entry["gain"] >= 0.03:
+                print(f"[DEBUG] 📈 Investeringsmatch gevonden: {entry['stock']}")
                 return entry
+    print(f"[DEBUG] ❌ Geen investeringsmatch voor: {title}")
     return None
 
 def send_investment_alert(article, analysis):
@@ -110,11 +107,9 @@ def start_monitoring():
                 if analysis:
                     send_investment_alert(article, analysis)
         except Exception as e:
-            print(f"Fout tijdens controleren of verzenden: {e}")
+            print(f"[FOUT] 🛑 Tijdens monitoring: {e}")
 
-        time.sleep(300)  # Elke 5 minuten
+        time.sleep(300)  # 5 minuten
 
 if __name__ == "__main__":
     start_monitoring()
-
-
